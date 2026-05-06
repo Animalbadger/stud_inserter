@@ -28,6 +28,9 @@ def get_holes():
         cv2.namedWindow("Camera View", cv2.WINDOW_NORMAL)
         cv2.namedWindow("Threshold", cv2.WINDOW_NORMAL)
         cv2.createTrackbar("thresh", "Threshold", THRESHOLD_VALUE, 255, lambda _x: None)
+        cv2.createTrackbar("min_area", "Threshold", MIN_AREA, 20000, lambda _x: None)
+        cv2.createTrackbar("max_area", "Threshold", MAX_AREA, 50000, lambda _x: None)
+        cv2.createTrackbar("circularity", "Threshold", 55, 100, lambda _x: None)  # 0.55
 
         while True:
             frame = picam2.capture_array()
@@ -37,13 +40,27 @@ def get_holes():
             gray = cv2.GaussianBlur(gray, (5, 5), 0)
 
             t = cv2.getTrackbarPos("thresh", "Threshold")
+            min_area = cv2.getTrackbarPos("min_area", "Threshold")
+            max_area = cv2.getTrackbarPos("max_area", "Threshold")
+            circ_min = cv2.getTrackbarPos("circularity", "Threshold") / 100.0
             _, bw = cv2.threshold(gray, t, 255, cv2.THRESH_BINARY_INV)
+            # cleanup helps when white background gets grainy
+            bw = cv2.morphologyEx(bw, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8), iterations=1)
+            bw = cv2.morphologyEx(bw, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8), iterations=1)
+
             contours, _ = cv2.findContours(bw, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
             holes = []
             for cnt in contours:
                 area = cv2.contourArea(cnt)
-                if area < MIN_AREA or area > MAX_AREA:
+                if area < min_area or area > max_area:
+                    continue
+
+                peri = cv2.arcLength(cnt, True)
+                if peri <= 0:
+                    continue
+                circularity = (4 * np.pi * area) / (peri * peri)
+                if circularity < circ_min:
                     continue
 
                 m = cv2.moments(cnt)
@@ -77,6 +94,38 @@ def get_holes():
             for i, (cx, cy) in enumerate(holes, start=1):
                 cv2.circle(display, (cx, cy), 8, (0, 0, 255), 2)
                 cv2.circle(bw_display, (cx, cy), 8, (0, 0, 255), 2)
+
+                # big "X" marker so it's obvious what's accepted as a hole
+                x_len = 14
+                cv2.line(
+                    display,
+                    (cx - x_len, cy - x_len),
+                    (cx + x_len, cy + x_len),
+                    (0, 0, 255),
+                    2,
+                )
+                cv2.line(
+                    display,
+                    (cx - x_len, cy + x_len),
+                    (cx + x_len, cy - x_len),
+                    (0, 0, 255),
+                    2,
+                )
+                cv2.line(
+                    bw_display,
+                    (cx - x_len, cy - x_len),
+                    (cx + x_len, cy + x_len),
+                    (0, 0, 255),
+                    2,
+                )
+                cv2.line(
+                    bw_display,
+                    (cx - x_len, cy + x_len),
+                    (cx + x_len, cy - x_len),
+                    (0, 0, 255),
+                    2,
+                )
+
                 cv2.putText(
                     display,
                     f"H{i}",
@@ -97,6 +146,17 @@ def get_holes():
                     2,
                     cv2.LINE_AA,
                 )
+
+            cv2.putText(
+                display,
+                f"holes={len(holes)}  thresh={t}  area=[{min_area},{max_area}]  circ>={circ_min:.2f}",
+                (10, 25),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (0, 255, 255),
+                2,
+                cv2.LINE_AA,
+            )
 
             cv2.imshow("Camera View", display)
             cv2.imshow("Threshold", bw_display)
