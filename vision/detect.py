@@ -31,6 +31,11 @@ def get_holes():
         cv2.createTrackbar("min_area", "Threshold", MIN_AREA, 20000, lambda _x: None)
         cv2.createTrackbar("max_area", "Threshold", MAX_AREA, 50000, lambda _x: None)
         cv2.createTrackbar("circularity", "Threshold", 55, 100, lambda _x: None)  # 0.55
+        cv2.createTrackbar("mode", "Threshold", 1, 2, lambda _x: None)  # 0=global, 1=adaptive, 2=otsu
+        cv2.createTrackbar("inv", "Threshold", 1, 1, lambda _x: None)  # 1=invert (dark holes)
+        cv2.createTrackbar("block", "Threshold", 25, 99, lambda _x: None)  # adaptive block size (odd)
+        cv2.createTrackbar("C", "Threshold", 5, 30, lambda _x: None)  # adaptive constant
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
 
         while True:
             frame = picam2.capture_array()
@@ -38,12 +43,35 @@ def get_holes():
             image_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
             gray = cv2.GaussianBlur(gray, (5, 5), 0)
+            gray = clahe.apply(gray)
 
             t = cv2.getTrackbarPos("thresh", "Threshold")
             min_area = cv2.getTrackbarPos("min_area", "Threshold")
             max_area = cv2.getTrackbarPos("max_area", "Threshold")
             circ_min = cv2.getTrackbarPos("circularity", "Threshold") / 100.0
-            _, bw = cv2.threshold(gray, t, 255, cv2.THRESH_BINARY_INV)
+            mode = cv2.getTrackbarPos("mode", "Threshold")
+            inv = cv2.getTrackbarPos("inv", "Threshold") == 1
+
+            if mode == 1:
+                block = cv2.getTrackbarPos("block", "Threshold")
+                block = max(3, block | 1)  # ensure odd and >=3
+                c = cv2.getTrackbarPos("C", "Threshold")
+                thresh_type = cv2.THRESH_BINARY_INV if inv else cv2.THRESH_BINARY
+                bw = cv2.adaptiveThreshold(
+                    gray,
+                    255,
+                    cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                    thresh_type,
+                    block,
+                    c,
+                )
+            elif mode == 2:
+                thresh_type = cv2.THRESH_BINARY_INV if inv else cv2.THRESH_BINARY
+                _, bw = cv2.threshold(gray, 0, 255, thresh_type | cv2.THRESH_OTSU)
+            else:
+                thresh_type = cv2.THRESH_BINARY_INV if inv else cv2.THRESH_BINARY
+                _, bw = cv2.threshold(gray, t, 255, thresh_type)
+
             # cleanup helps when white background gets grainy
             bw = cv2.morphologyEx(bw, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8), iterations=1)
             bw = cv2.morphologyEx(bw, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8), iterations=1)
@@ -149,7 +177,7 @@ def get_holes():
 
             cv2.putText(
                 display,
-                f"holes={len(holes)}  thresh={t}  area=[{min_area},{max_area}]  circ>={circ_min:.2f}",
+                f"holes={len(holes)}  mode={mode}  inv={int(inv)}  thresh={t}  area=[{min_area},{max_area}]  circ>={circ_min:.2f}",
                 (10, 25),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.7,
