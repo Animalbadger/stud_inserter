@@ -103,7 +103,7 @@ def interactive_probe_z_max_down(
     print(f"- u = Z up {nudge} steps")
     print(f"- a/d = X left/right {cfg.XY_CALIBRATION_NUDGE_STEPS} steps")
     print(f"- w/x = Y forward/back {cfg.XY_CALIBRATION_NUDGE_STEPS} steps")
-    print("- s = print suggested Z_MAX_DOWN_STEPS and exit")
+    print("- s = print current coords + suggested Z_MAX_DOWN_STEPS (does not exit)")
     print("- q = quit")
     print("- Note: before any X/Y move, Z will auto-raise to Z_SAFE_FOR_XY_STEPS.")
     print(f"- Abort if z would exceed {ceiling} (config Z_CALIBRATION_ABS_CEILING_STEPS).")
@@ -136,10 +136,10 @@ def interactive_probe_z_max_down(
                 measured_z = controller.z
                 suggested = max(0, measured_z - margin)
                 print()
-                print(f"Measured depth z ≈ {measured_z} steps from Z home (z=0).")
-                print(f"Suggested: set Z_MAX_DOWN_STEPS = {suggested}  (applied margin −{margin})")
-                print("Copy into config.py, save, then restart your program.")
-                return suggested
+                print(f"Current coords (steps): x={controller.x} y={controller.y} z={controller.z}")
+                print(f"(Z probe) measured depth z ≈ {measured_z} steps from Z home (z=0).")
+                print(f"(Z probe) suggested: Z_MAX_DOWN_STEPS = {suggested}  (margin −{margin})")
+                continue
 
             if key in ("u", "r"):
                 try:
