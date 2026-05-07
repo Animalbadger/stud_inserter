@@ -44,6 +44,7 @@ def _move_to_steps(controller: MotionController, *, x: int | None = None, y: int
 def pickup_insert(
     controller: MotionController,
     *,
+    home_first: bool = True,
     above_x: int = 13050,
     above_y: int = 1050,
     above_z: int = 6950,
@@ -57,6 +58,10 @@ def pickup_insert(
       2) Push down to hook depth (same x,y, deeper z)
       3) Retract to safe-ish height and back X off a bit
     """
+    if home_first:
+        _LOG.info("Homing before pickup sequence")
+        home_all_axes(controller)
+
     _LOG.info("Pickup stage 1: above insert -> x=%s y=%s z=%s", above_x, above_y, above_z)
     _move_to_steps(controller, x=above_x, y=above_y, z=above_z)
 
@@ -81,8 +86,7 @@ def main() -> None:
     motors = MotionController()
     motors.setup()
     try:
-        home_all_axes(motors)
-        pickup_insert(motors)
+        pickup_insert(motors, home_first=True)
     finally:
         motors.cleanup()
 
