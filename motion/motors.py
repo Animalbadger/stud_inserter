@@ -103,8 +103,13 @@ class MotionController:
 
         return None
 
-    def _pulse_step_pin(self, step_pin: int) -> None:
-        delay = cfg.STEP_DELAY_S
+    def _axis_delay_s(self, axis: str) -> float:
+        if axis in ("x", "y"):
+            return getattr(cfg, "STEP_DELAY_XY_S", cfg.STEP_DELAY_S)
+        return getattr(cfg, "STEP_DELAY_Z_S", cfg.STEP_DELAY_S)
+
+    def _pulse_step_pin(self, step_pin: int, *, delay_s: float) -> None:
+        delay = delay_s
         if self._mock:
             time.sleep(delay * 0.1)
             return
@@ -182,6 +187,7 @@ class MotionController:
             "z": (cfg.Z_STEP_PIN, cfg.Z_DIR_PIN),
         }
         step_pin, dir_pin = pins[axis]
+        delay_s = self._axis_delay_s(axis)
 
         dc = self._delta_cfg(axis)
         logical_step = 1 if signed_steps > 0 else -1
@@ -200,7 +206,7 @@ class MotionController:
                 self._apply_z_limit_for_step(coord_delta)
 
             self._set_dir(dir_pin, dir_high)
-            self._pulse_step_pin(step_pin)
+            self._pulse_step_pin(step_pin, delay_s=delay_s)
 
             if axis == "x":
                 self.x += coord_delta

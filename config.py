@@ -20,7 +20,12 @@ Y_MAX_PIN = 19
 Z_HOME_PIN = 26
 
 # Pulse timing (seconds each half-period of one step pulse)
-STEP_DELAY_S = 0.0015
+# Keep Z a bit slower; X/Y can be faster.
+STEP_DELAY_XY_S = 0.0010
+STEP_DELAY_Z_S = 0.0015
+
+# Back-compat default (used by homing unless overridden)
+STEP_DELAY_S = STEP_DELAY_Z_S
 
 # Homing: DIR pin level used while moving toward the switch (see motors pulse semantics)
 X_HOME_DIR_HIGH = False
