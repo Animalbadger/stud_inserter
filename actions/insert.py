@@ -54,6 +54,7 @@ def pickup_insert(
     retract_z: int = 4000,
     x_backoff_steps: int = 500,
     move_to_mid_after: bool = True,
+    center_travel_z: int = 2000,
 ) -> None:
     """
     3-stage pickup:
@@ -90,7 +91,13 @@ def pickup_insert(
     if move_to_mid_after:
         mid_x = max(0, controller.x // 2)
         mid_y = max(0, controller.y // 2)
-        _LOG.info("Pickup stage 4: move toward center-ish -> x=%s y=%s", mid_x, mid_y)
+        _LOG.info(
+            "Pickup stage 4: raise for travel -> z=%s; then move center-ish -> x=%s y=%s",
+            center_travel_z,
+            mid_x,
+            mid_y,
+        )
+        _move_to_steps(controller, z=center_travel_z)
         _move_to_steps(controller, x=mid_x, y=mid_y)
 
     _LOG.info("Pickup complete. Current coords: x=%s y=%s z=%s", controller.x, controller.y, controller.z)
