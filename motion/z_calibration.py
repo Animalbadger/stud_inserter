@@ -103,6 +103,7 @@ def interactive_probe_z_max_down(
     print(f"- u = Z up {nudge} steps")
     print(f"- a/d = X left/right {cfg.XY_CALIBRATION_NUDGE_STEPS} steps")
     print(f"- w/x = Y forward/back {cfg.XY_CALIBRATION_NUDGE_STEPS} steps")
+    print("- t = toggle auto-raise Z before X/Y (default ON)")
     print("- s = print current coords + suggested Z_MAX_DOWN_STEPS (does not exit)")
     print("- q = quit")
     print("- Note: before any X/Y move, Z will auto-raise to Z_SAFE_FOR_XY_STEPS.")
@@ -116,6 +117,8 @@ def interactive_probe_z_max_down(
     with _RawTerminal() as rt:
         if not rt.enabled:
             print("Raw key mode unavailable here; falling back to line input (requires Enter).")
+
+        auto_raise_xy = True
 
         while True:
             if rt.enabled:
@@ -131,6 +134,14 @@ def interactive_probe_z_max_down(
             if key in ("q",):
                 print("Quit without saving.")
                 return None
+
+            if key in ("t",):
+                auto_raise_xy = not auto_raise_xy
+                state = "ON" if auto_raise_xy else "OFF"
+                print()
+                print(f"Auto-raise Z before X/Y is now: {state}")
+                print()
+                continue
 
             if key in ("s",):
                 measured_z = controller.z
@@ -159,7 +170,8 @@ def interactive_probe_z_max_down(
 
             if key in ("a", "d", "w", "x"):
                 try:
-                    controller.ensure_safe_z_for_xy()
+                    if auto_raise_xy:
+                        controller.ensure_safe_z_for_xy()
                     xy = cfg.XY_CALIBRATION_NUDGE_STEPS
                     if key == "a":
                         controller.step_relative("x", -xy)
