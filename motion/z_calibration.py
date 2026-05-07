@@ -25,6 +25,52 @@ from motion.motors import MotionController
 
 _LOG = logging.getLogger(__name__)
 
+def _read_key(timeout_s: float = 0.1) -> str | None:
+    """
+    Read a single keypress without requiring Enter (POSIX terminals only).
+    Returns None if no key is available within timeout.
+    """
+    try:
+        import select
+        import sys
+
+        if select.select([sys.stdin], [], [], timeout_s)[0]:
+            ch = sys.stdin.read(1)
+            return ch
+        return None
+    except Exception:
+        return None
+
+
+class _RawTerminal:
+    """Context manager to put stdin into cbreak/raw-ish mode (POSIX only)."""
+
+    def __enter__(self):
+        import sys
+
+        try:
+            import termios
+            import tty
+
+            self._termios = termios
+            self._fd = sys.stdin.fileno()
+            self._old = termios.tcgetattr(self._fd)
+            tty.setcbreak(self._fd)
+            self._enabled = True
+        except Exception:
+            self._enabled = False
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        if not getattr(self, "_enabled", False):
+            return False
+        self._termios.tcsetattr(self._fd, self._termios.TCSADRAIN, self._old)
+        return False
+
+    @property
+    def enabled(self) -> bool:
+        return getattr(self, "_enabled", False)
+
 
 def interactive_probe_z_max_down(
     controller: MotionController,
@@ -64,56 +110,70 @@ def interactive_probe_z_max_down(
     print(f"- Current position (steps): x={controller.x} y={controller.y} z={controller.z}  (z=0 is homed top)")
     print()
 
-    while True:
-        raw = input(f"x={controller.x} y={controller.y} z={controller.z}  key? ").strip().lower()
+    print("Press keys directly (no Enter needed). If keys don't register, run from a real Pi terminal (not some IDE consoles).")
+    print()
 
-        if raw == "q":
-            print("Quit without saving.")
-            return None
+    with _RawTerminal() as rt:
+        if not rt.enabled:
+            print("Raw key mode unavailable here; falling back to line input (requires Enter).")
 
-        if raw == "s":
-            measured_z = controller.z
-            suggested = max(0, measured_z - margin)
-            print()
-            print(f"Measured depth z ≈ {measured_z} steps from Z home (z=0).")
-            print(f"Suggested: set Z_MAX_DOWN_STEPS = {suggested}  (applied margin −{margin})")
-            print("Copy into config.py, save, then restart your program.")
-            return suggested
+        while True:
+            if rt.enabled:
+                ch = _read_key(0.1)
+                if ch is None:
+                    continue
+                key = ch.lower()
+            else:
+                key = input(f"x={controller.x} y={controller.y} z={controller.z}  key? ").strip().lower()
+                if key == "":
+                    key = "\n"
 
-        if raw == "u":
-            try:
-                controller.step_relative("z", -nudge, enforce_z_limits=True)
-            except RuntimeError as e:
-                print(f"Blocked: {e}")
-            continue
+            if key in ("q",):
+                print("Quit without saving.")
+                return None
 
-        if raw in ("a", "d", "w", "x"):
-            try:
-                controller.ensure_safe_z_for_xy()
-                xy = cfg.XY_CALIBRATION_NUDGE_STEPS
-                if raw == "a":
-                    controller.step_relative("x", -xy)
-                elif raw == "d":
-                    controller.step_relative("x", xy)
-                elif raw == "w":
-                    controller.step_relative("y", xy)
-                else:  # "x"
-                    controller.step_relative("y", -xy)
-            except RuntimeError as e:
-                print(f"Blocked: {e}")
-            continue
+            if key in ("s",):
+                measured_z = controller.z
+                suggested = max(0, measured_z - margin)
+                print()
+                print(f"Measured depth z ≈ {measured_z} steps from Z home (z=0).")
+                print(f"Suggested: set Z_MAX_DOWN_STEPS = {suggested}  (applied margin −{margin})")
+                print("Copy into config.py, save, then restart your program.")
+                return suggested
 
-        if raw != "" and raw != "d":
-            print("Unknown key. Use Enter/u/a/d/w/x/s/q.")
-            continue
+            if key in ("u", "r"):
+                try:
+                    controller.step_relative("z", -nudge, enforce_z_limits=True)
+                except RuntimeError as e:
+                    print(f"Blocked: {e}")
+                continue
 
-        # Down (default Enter or explicit)
-        nz = controller.z + nudge
-        if nz > ceiling:
-            print(f"Refusing: z would exceed calibration ceiling ({ceiling}).")
-            continue
+            if key in ("\n", "\r", "f"):
+                # Down
+                nz = controller.z + nudge
+                if nz > ceiling:
+                    print(f"Refusing: z would exceed calibration ceiling ({ceiling}).")
+                    continue
+                controller.step_relative("z", nudge, enforce_z_limits=False)
+                continue
 
-        controller.step_relative("z", nudge, enforce_z_limits=False)
+            if key in ("a", "d", "w", "x"):
+                try:
+                    controller.ensure_safe_z_for_xy()
+                    xy = cfg.XY_CALIBRATION_NUDGE_STEPS
+                    if key == "a":
+                        controller.step_relative("x", -xy)
+                    elif key == "d":
+                        controller.step_relative("x", xy)
+                    elif key == "w":
+                        controller.step_relative("y", xy)
+                    else:  # "x"
+                        controller.step_relative("y", -xy)
+                except RuntimeError as e:
+                    print(f"Blocked: {e}")
+                continue
+
+            # ignore unknown keys (arrow keys send escape sequences etc.)
 
 
 def continuous_slow_probe_down(
