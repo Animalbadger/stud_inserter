@@ -47,6 +47,7 @@ def pickup_insert(
     home_first: bool = True,
     above_x: int = 13050,
     above_y: int = 1050,
+    above_x_offset: int = -10,
     above_y_offset: int = -10,
     above_z: int = 6950,
     hook_z: int = 7550,
@@ -63,16 +64,19 @@ def pickup_insert(
         _LOG.info("Homing before pickup sequence")
         home_all_axes(controller)
 
+    target_x = above_x + above_x_offset
     target_y = above_y + above_y_offset
     _LOG.info(
-        "Pickup stage 1: above insert -> x=%s y=%s (base %s + off %s) z=%s",
+        "Pickup stage 1: above insert -> x=%s (base %s + off %s) y=%s (base %s + off %s) z=%s",
+        target_x,
         above_x,
+        above_x_offset,
         target_y,
         above_y,
         above_y_offset,
         above_z,
     )
-    _move_to_steps(controller, x=above_x, y=target_y, z=above_z)
+    _move_to_steps(controller, x=target_x, y=target_y, z=above_z)
 
     _LOG.info("Pickup stage 2: hook/press -> z=%s", hook_z)
     _move_to_steps(controller, z=hook_z)

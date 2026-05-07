@@ -62,6 +62,7 @@ def _home_one_axis(
     switch_pin: int,
     home_dir_high: bool,
     backoff_steps: int,
+    seek_delay_s: float | None = None,
 ) -> None:
     _LOG.info("Homing %s...", name)
 
@@ -77,7 +78,7 @@ def _home_one_axis(
         toward_switch_dir_high=home_dir_high,
         switch_pin=switch_pin,
         max_steps=cfg.HOMING_MAX_SEEK_STEPS,
-        step_delay_s=None,
+        step_delay_s=seek_delay_s,
     )
     _LOG.info("%s hit switch", name)
 
@@ -89,8 +90,15 @@ def _home_one_axis(
         dir_pin=dir_pin,
         dir_high=away_high,
         count=backoff_steps,
-        step_delay_s=None,
+        step_delay_s=seek_delay_s,
     )
+
+    # Ensure we actually released the switch after backoff (prevents \"homing\" while still pressed)
+    if controller.switch_pressed(switch_pin):
+        raise RuntimeError(
+            f\"{name} homing error: switch still pressed after backoff. "
+            f\"Increase HOMING_BACKOFF_STEPS or reduce speed.\"
+        )
 
     # Slow second touch
     _seek_until_pressed(
@@ -127,6 +135,7 @@ def home_all_axes(controller: MotionController) -> None:
         switch_pin=cfg.Z_HOME_PIN,
         home_dir_high=cfg.Z_HOME_DIR_HIGH,
         backoff_steps=cfg.HOMING_BACKOFF_STEPS,
+        seek_delay_s=getattr(cfg, "HOMING_STEP_DELAY_Z_S", None),
     )
     controller.set_position(z=0)
 
@@ -139,6 +148,7 @@ def home_all_axes(controller: MotionController) -> None:
         switch_pin=cfg.X_MIN_PIN,
         home_dir_high=cfg.X_HOME_DIR_HIGH,
         backoff_steps=cfg.HOMING_BACKOFF_STEPS,
+        seek_delay_s=getattr(cfg, "HOMING_STEP_DELAY_X_S", None),
     )
     controller.set_position(x=0)
 
@@ -151,6 +161,7 @@ def home_all_axes(controller: MotionController) -> None:
         switch_pin=cfg.Y_MIN_PIN,
         home_dir_high=cfg.Y_HOME_DIR_HIGH,
         backoff_steps=cfg.HOMING_BACKOFF_STEPS,
+        seek_delay_s=getattr(cfg, "HOMING_STEP_DELAY_Y_S", None),
     )
     controller.set_position(y=0)
 

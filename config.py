@@ -21,10 +21,11 @@ Z_HOME_PIN = 26
 
 # Pulse timing (seconds each half-period of one step pulse)
 # Keep Z a bit slower; X/Y can be faster.
-STEP_DELAY_XY_S = 0.0010
+STEP_DELAY_XY_S = 0.0007
 STEP_DELAY_Z_S = 0.0015
 
-# Back-compat default (used by homing unless overridden)
+# Back-compat default (used by homing seek unless overridden).
+# Keep homing conservative/repeatable; speed up XY for normal moves separately.
 STEP_DELAY_S = STEP_DELAY_Z_S
 
 # Homing: DIR pin level used while moving toward the switch (see motors pulse semantics)
@@ -40,6 +41,11 @@ HOMING_MAX_SEEK_STEPS = 200_000
 
 # Slow re-approach uses a longer delay for gentler contact
 HOMING_SLOW_STEP_DELAY_S = 0.003
+
+# Homing seek/backoff speeds (per half-step delay). Use these to slow a specific axis.
+HOMING_STEP_DELAY_X_S = STEP_DELAY_S
+HOMING_STEP_DELAY_Y_S = 0.0025
+HOMING_STEP_DELAY_Z_S = STEP_DELAY_S
 
 # ---------------------------------------------------------------------------
 # Software limits & safe motion (steps, signed position from home origin)
