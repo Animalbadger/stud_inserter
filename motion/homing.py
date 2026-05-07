@@ -93,11 +93,11 @@ def _home_one_axis(
         step_delay_s=seek_delay_s,
     )
 
-    # Ensure we actually released the switch after backoff (prevents \"homing\" while still pressed)
+    # Ensure we actually released the switch after backoff (prevents homing while still pressed)
     if controller.switch_pressed(switch_pin):
         raise RuntimeError(
-            f\"{name} homing error: switch still pressed after backoff. "
-            f\"Increase HOMING_BACKOFF_STEPS or reduce speed.\"
+            f"{name} homing error: switch still pressed after backoff. "
+            "Increase HOMING_BACKOFF_STEPS or reduce speed."
         )
 
     # Slow second touch
