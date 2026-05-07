@@ -51,11 +51,11 @@ def interactive_probe_z_max_down(
         home_all_axes(controller)
 
     print()
-    print("=== Z max-down calibration ===")
-    print("- Position z is ONLY updated by commanded steps here (not by turning motor by hand).")
-    print("- Keep Estop / power ready. Stop BEFORE hardware crash.")
-    print(f"- Each [Enter] moves DOWN {nudge} steps (limits bypassed for downward probe).")
-    print("- Commands: [Enter]=down  [u]=up same amount  [s]=print suggested config  [q]=quit")
+    print(" Z max-down calibration")
+    print("- .")
+    print("- turn off the power supply if the machine starts tweeking. Stop BEFORE hardware crash.")
+    print(f"- Each [Enter] moves DOWNward {nudge} steps (i bypassed the limits bypassed for downward probe).")
+    print("- Commands: [Enter]=down  [u]=up same amount  [s]=print or shows you the suggested config and oress [q]=quit")
     print(f"- Abort if z would exceed {ceiling} (config Z_CALIBRATION_ABS_CEILING_STEPS).")
     print(f"- Current z = {controller.z} (0 = homed top)")
     print()
@@ -71,9 +71,9 @@ def interactive_probe_z_max_down(
             measured_z = controller.z
             suggested = max(0, measured_z - margin)
             print()
-            print(f"Measured depth z ≈ {measured_z} steps from Z home.")
-            print(f"Suggested: set Z_MAX_DOWN_STEPS = {suggested}  (applied margin −{margin})")
-            print("Copy into config.py and power-cycle / restart before relying on limits.")
+            print(f"Measured depth z ≈ {measured_z} steps from the intial Z home.")
+            print(f"Suggested set Z_MAX_DOWN_STEPS = {suggested}  (applied margin −{margin})")
+            print("save this number and just send to me or save it")
             return suggested
 
         if raw == "u":

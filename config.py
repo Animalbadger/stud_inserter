@@ -45,7 +45,7 @@ HOMING_SLOW_STEP_DELAY_S = 0.003
 # When DIR is HIGH, position delta per pulse (+1 or -1). Flip if an axis runs backward.
 X_POSITION_DELTA_DIR_HIGH = 1
 Y_POSITION_DELTA_DIR_HIGH = 1
-Z_POSITION_DELTA_DIR_HIGH = 1
+Z_POSITION_DELTA_DIR_HIGH = -1
 
 # Maximum downward travel from Z home (0); refuse pulses that would exceed this.
 # You do not need to feed us a number before first bring-up: these defaults are guesses.
