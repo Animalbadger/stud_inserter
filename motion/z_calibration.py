@@ -51,17 +51,21 @@ def interactive_probe_z_max_down(
         home_all_axes(controller)
 
     print()
-    print(" Z max-down calibration")
-    print("- .")
-    print("- turn off the power supply if the machine starts tweeking. Stop BEFORE hardware crash.")
-    print(f"- Each [Enter] moves DOWNward {nudge} steps (i bypassed the limits bypassed for downward probe).")
-    print("- Commands: [Enter]=down  [u]=up same amount  [s]=print or shows you the suggested config and oress [q]=quit")
+    print("=== Jog + Z max-down calibration ===")
+    print("- Keep hands near E-stop / power. Stop BEFORE hardware crash.")
+    print(f"- Enter = Z down {nudge} steps (limits bypassed for probing)")
+    print(f"- u = Z up {nudge} steps")
+    print(f"- a/d = X left/right {cfg.XY_CALIBRATION_NUDGE_STEPS} steps")
+    print(f"- w/x = Y forward/back {cfg.XY_CALIBRATION_NUDGE_STEPS} steps")
+    print("- s = print suggested Z_MAX_DOWN_STEPS and exit")
+    print("- q = quit")
+    print("- Note: before any X/Y move, Z will auto-raise to Z_SAFE_FOR_XY_STEPS.")
     print(f"- Abort if z would exceed {ceiling} (config Z_CALIBRATION_ABS_CEILING_STEPS).")
-    print(f"- Current z = {controller.z} (0 = homed top)")
+    print(f"- Current position (steps): x={controller.x} y={controller.y} z={controller.z}  (z=0 is homed top)")
     print()
 
     while True:
-        raw = input(f"z={controller.z}  Enter/u/s/q? ").strip().lower()
+        raw = input(f"x={controller.x} y={controller.y} z={controller.z}  key? ").strip().lower()
 
         if raw == "q":
             print("Quit without saving.")
@@ -71,17 +75,36 @@ def interactive_probe_z_max_down(
             measured_z = controller.z
             suggested = max(0, measured_z - margin)
             print()
-            print(f"Measured depth z ≈ {measured_z} steps from the intial Z home.")
-            print(f"Suggested set Z_MAX_DOWN_STEPS = {suggested}  (applied margin −{margin})")
-            print("save this number and just send to me or save it")
+            print(f"Measured depth z ≈ {measured_z} steps from Z home (z=0).")
+            print(f"Suggested: set Z_MAX_DOWN_STEPS = {suggested}  (applied margin −{margin})")
+            print("Copy into config.py, save, then restart your program.")
             return suggested
 
         if raw == "u":
-            controller.step_relative("z", -nudge, enforce_z_limits=True)
+            try:
+                controller.step_relative("z", -nudge, enforce_z_limits=True)
+            except RuntimeError as e:
+                print(f"Blocked: {e}")
+            continue
+
+        if raw in ("a", "d", "w", "x"):
+            try:
+                controller.ensure_safe_z_for_xy()
+                xy = cfg.XY_CALIBRATION_NUDGE_STEPS
+                if raw == "a":
+                    controller.step_relative("x", -xy)
+                elif raw == "d":
+                    controller.step_relative("x", xy)
+                elif raw == "w":
+                    controller.step_relative("y", xy)
+                else:  # "x"
+                    controller.step_relative("y", -xy)
+            except RuntimeError as e:
+                print(f"Blocked: {e}")
             continue
 
         if raw != "" and raw != "d":
-            print("Unknown key; use Enter (down), u, s, or q.")
+            print("Unknown key. Use Enter/u/a/d/w/x/s/q.")
             continue
 
         # Down (default Enter or explicit)

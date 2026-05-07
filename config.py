@@ -52,7 +52,7 @@ Z_POSITION_DELTA_DIR_HIGH = -1
 # After homing, jog Z down slowly toward the plate, note steps at safe contact, then set
 # Z_MAX_DOWN_STEPS slightly below that. Same idea for Z_SAFE_FOR_XY_STEPS = “high enough
 # to skim X/Y without hitting the part.”
-Z_MAX_DOWN_STEPS = 12_000
+Z_MAX_DOWN_STEPS = 7_650
 Z_SAFE_FOR_XY_STEPS = 3_500
 
 # Interactive Z calibration (motion/z_calibration.py — Pi only, supervised)
@@ -64,6 +64,9 @@ Z_CALIBRATION_ABS_CEILING_STEPS = 50_000  # refuse probing deeper than this (saf
 Z_CALIBRATION_SLOW_EXTRA_DELAY_S = 0.03
 # If non-empty, append one "z" integer per line while probing (e.g. "z_probe_log.txt")
 Z_CALIBRATION_SLOW_LOG_PATH = ""
+
+# Jog step size for X/Y inside motion/z_calibration.py (steps per keypress)
+XY_CALIBRATION_NUDGE_STEPS = 50
 
 # XY software envelope (steps). After homing, X and Y are >= 0 at MIN limits.
 # Set to integers when you know usable travel; None = do not enforce in software yet

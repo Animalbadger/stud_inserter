@@ -76,6 +76,33 @@ class MotionController:
             return False
         return GPIO.input(pin) == GPIO.LOW
 
+    def _limit_blocked(self, axis: str, logical_step: int) -> str | None:
+        """
+        Returns a message if motion is blocked by a pressed limit switch.
+
+        logical_step: +1 means moving toward the MAX end, -1 toward the MIN end
+        (based on our post-home coordinate convention).
+        """
+        if self._mock:
+            return None
+
+        if axis == "x":
+            if logical_step < 0 and self.switch_pressed(cfg.X_MIN_PIN):
+                return "X_MIN limit switch is pressed"
+            if logical_step > 0 and self.switch_pressed(cfg.X_MAX_PIN):
+                return "X_MAX limit switch is pressed"
+        elif axis == "y":
+            if logical_step < 0 and self.switch_pressed(cfg.Y_MIN_PIN):
+                return "Y_MIN limit switch is pressed"
+            if logical_step > 0 and self.switch_pressed(cfg.Y_MAX_PIN):
+                return "Y_MAX limit switch is pressed"
+        elif axis == "z":
+            # Only a top/home switch exists right now.
+            if logical_step < 0 and self.switch_pressed(cfg.Z_HOME_PIN):
+                return "Z_HOME limit switch is pressed"
+
+        return None
+
     def _pulse_step_pin(self, step_pin: int) -> None:
         delay = cfg.STEP_DELAY_S
         if self._mock:
@@ -163,6 +190,10 @@ class MotionController:
         coord_delta = logical_step * abs(int(dc))
 
         while remaining > 0:
+            blocked = self._limit_blocked(axis, logical_step)
+            if blocked is not None:
+                raise RuntimeError(f"Blocked by limit switch: {blocked}")
+
             if axis in ("x", "y"):
                 self._apply_xy_soft_limit_for_step(axis, coord_delta)
             if axis == "z" and enforce_z_limits:
