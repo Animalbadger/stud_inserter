@@ -171,6 +171,10 @@ def interactive_probe_z_max_down(
             if key in ("a", "d", "w", "x"):
                 try:
                     if auto_raise_xy:
+                        if controller.z > cfg.Z_SAFE_FOR_XY_STEPS:
+                            print(
+                                f"\nAuto-raising Z for XY: z {controller.z} -> {cfg.Z_SAFE_FOR_XY_STEPS}\n"
+                            )
                         controller.ensure_safe_z_for_xy()
                     xy = cfg.XY_CALIBRATION_NUDGE_STEPS
                     if key == "a":

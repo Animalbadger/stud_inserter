@@ -232,8 +232,12 @@ class MotionController:
 
     def ensure_safe_z_for_xy(self) -> None:
         """Raise Z until within Z_SAFE_FOR_XY_STEPS (tool clear for horizontal moves)."""
+        # Move in chunks so it doesn't look like "Z runs forever" when far below safe height.
+        chunk = 50
         while self.z > cfg.Z_SAFE_FOR_XY_STEPS:
-            self.step_relative("z", -1)
+            remaining = self.z - cfg.Z_SAFE_FOR_XY_STEPS
+            step_up = -min(chunk, remaining)
+            self.step_relative("z", step_up)
 
     def set_position(self, x: int | None = None, y: int | None = None, z: int | None = None) -> None:
         """Set tracked position (used after homing)."""
