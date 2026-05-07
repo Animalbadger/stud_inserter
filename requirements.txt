@@ -1,0 +1,4 @@
+# Raspberry Pi runtime (install on the Pi; picamera2 via apt/system image)
+numpy
+opencv-python-headless
+RPi.GPIO
